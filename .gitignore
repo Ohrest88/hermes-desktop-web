@@ -1,0 +1,7 @@
+# upstream checkout + build output — regenerate with the README steps
+src-upstream/
+dist/
+build-public/
+node_modules/
+__pycache__/
+*.log

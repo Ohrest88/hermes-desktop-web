@@ -1,0 +1,9 @@
+{
+  "name": "web-terminal",
+  "label": "Web Terminal",
+  "description": "Gateway-side shell PTY endpoint for the Hermes Desktop web build (browser terminal tab)",
+  "icon": "Terminal",
+  "version": "0.1.0",
+  "tab": { "hidden": true },
+  "api": "plugin_api.py"
+}

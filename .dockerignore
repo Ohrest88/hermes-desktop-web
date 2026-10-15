@@ -1,0 +1,9 @@
+# image build clones + builds inside Docker; nothing local is copied except
+# build-renderer.mjs, web-bridge.js, nginx.conf.template
+src-upstream/
+build-public/
+vite-cache/
+dist/
+node_modules/
+.git/
+*.log

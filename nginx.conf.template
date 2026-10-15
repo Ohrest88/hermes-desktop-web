@@ -1,0 +1,31 @@
+# Hermes Desktop (web) — static bundle + same-origin gateway proxy.
+# GATEWAY: host:port of the hermes gateway (dashboard server).
+server {
+    listen 8090;
+    server_name _;
+
+    # Desktop uploads (attachments) can be large; gateway allows similar.
+    client_max_body_size 64m;
+
+    location / {
+        root /srv;
+        try_files $uri /index.html;
+    }
+
+    # Long-lived chat sockets: /api/ws, /api/pty, /api/pub, /api/events.
+    location /api/ {
+        proxy_pass http://${GATEWAY};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Forwarded-Prefix "";
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    # Gateway auth gate pages + flows (login form, oauth, ws-ticket REST is under /api).
+    location /login { proxy_pass http://${GATEWAY}; proxy_set_header Host $host; }
+    location /auth  { proxy_pass http://${GATEWAY}; proxy_set_header Host $host; }
+}
