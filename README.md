@@ -152,6 +152,15 @@ sidebar → send a message → agent turn streams over the backend WebSocket.
 Settings (all pages), Capabilities, Messaging, Artifacts, Scheduled jobs,
 and sidebar toggles render with zero console errors.
 
+## Compatibility
+
+Tested on Linux; untested in other operating systems. In principle, the
+container runs wherever podman/docker runs (Linux, macOS, Windows via
+WSL2/podman desktop), but the Linux-specific `--network host` example and
+the assumption that the gateway is reachable from the container don't
+translate as-is: expect to adjust the networking flags and gateway address
+on other Operating Systems.
+
 ## Known limits (web mode)
 
 - **Native-only features no-op:** OS window management, popout windows, HUD,
