@@ -1,6 +1,6 @@
 # hermes-desktop-web
 
-
+![Hermes desktop web in a browser tab](assets/screenshot.png)
 
 Run the [Hermes Agent](https://hermes-agent.nousresearch.com) **desktop app UI as a containerized web app in browser**, the container relays all traffic to your Hermes backend.
 
