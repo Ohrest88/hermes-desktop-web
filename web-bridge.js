@@ -139,23 +139,43 @@
       if (options.cols) params.set('cols', String(options.cols))
       if (options.rows) params.set('rows', String(options.rows))
       if (options.cwd) params.set('cwd', String(options.cwd))
-      params.set('ticket', await mintTicket())
+      const dialUrl = ticket =>
+        `${wsScheme}://${location.host}/api/plugins/web-terminal/terminal?${params}&ticket=${encodeURIComponent(ticket)}`
 
-      const ws = new WebSocket(`${wsScheme}://${location.host}/api/plugins/web-terminal/terminal?${params}`)
+      // The gateway's WS tickets are single-use with a 30 s TTL. If the browser
+      // queues the upgrade past that (busy page load, connection-slot wait), the
+      // gateway rejects it as expired (close 1008) and the tab reads as dead.
+      // One fresh-ticket retry covers that window; anything else surfaces with
+      // its close code instead of a blanket "unreachable".
+      const dial = () => new Promise((resolve, reject) => {
+        void mintTicket().then(ticket => {
+          const ws = new WebSocket(dialUrl(ticket))
 
-      ws.binaryType = 'arraybuffer'
+          ws.binaryType = 'arraybuffer'
+          const fail = code => {
+            try { ws.close() } catch { /* never opened */ }
+            reject(Object.assign(
+              new Error(`gateway terminal unreachable (close ${code ?? 'error'})`), { code }))
+          }
+          ws.onopen = () => resolve(ws)
+          ws.onerror = () => { /* the close event carries the code; it decides */ }
+          ws.onclose = e => ws.readyState === 3 && fail(e.code)
+          setTimeout(() => ws.readyState !== 1 && fail('timeout'), 8000)
+        }).catch(reject)
+      })
+
+      let ws
+      try {
+        ws = await dial()
+      } catch (e) {
+        if (e.code === 1008 || e.code === 'timeout') ws = await dial()
+        else throw e
+      }
 
       const id = crypto.randomUUID()
       const term = { data: new Set(), exit: new Set(), exited: false, ws }
 
       terminals.set(id, term)
-      await new Promise((resolve, reject) => {
-        const fail = () => reject(new Error('Terminal failed to start: gateway terminal unreachable'))
-
-        ws.onopen = resolve
-        ws.onerror = fail
-        setTimeout(() => ws.readyState !== 1 && fail(), 8000)
-      })
       ws.onmessage = e => {
         const text = typeof e.data === 'string' ? e.data : new TextDecoder().decode(e.data)
 
