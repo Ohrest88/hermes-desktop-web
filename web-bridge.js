@@ -324,7 +324,14 @@
     openExternal: url => { window.open(url, '_blank', 'noopener') },
     writeClipboard: text => navigator.clipboard.writeText(text),
     readClipboard: () => navigator.clipboard.readText(),
-    getPathForFile: file => (file && file.name) || '',
+    getPathForFile: file => {
+      if (!(file instanceof Blob)) return ''
+      const path = `/browser-upload/${++attachSeq}/${file.name || 'attachment'}`
+
+      clientFiles.set(path, file)
+
+      return path
+    },
     notify: payload => {
       try { new Notification(payload.title || 'Hermes', { body: payload.body || '' }) } catch { /* no permission */ }
     },
