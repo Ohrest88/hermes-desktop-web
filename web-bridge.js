@@ -8,6 +8,26 @@
 (() => {
   'use strict'
 
+  // crypto.randomUUID() exists only in secure contexts (https / localhost).
+  // Over plain http on a LAN IP it is undefined, and the renderer's submit
+  // path (submission-id minting) throws client-side — messages silently
+  // never send. Fill it in from getRandomValues (OS CSPRNG, available in
+  // non-secure contexts; only the randomUUID convenience wrapper is gated).
+  // No-ops wherever the native function exists, so https/localhost pages
+  // keep the native implementation untouched.
+  if (typeof crypto !== 'undefined' &&
+      typeof crypto.randomUUID !== 'function' &&
+      typeof crypto.getRandomValues === 'function') {
+    crypto.randomUUID = function randomUUID() {
+      const b = new Uint8Array(16)
+      crypto.getRandomValues(b)
+      b[6] = (b[6] & 0x0f) | 0x40 // version 4
+      b[8] = (b[8] & 0x3f) | 0x80 // RFC 4122 variant
+      const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+      return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20)
+    }
+  }
+
   const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws'
   const noop = () => {}
   const asyncNoop = async () => undefined
