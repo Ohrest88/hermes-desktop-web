@@ -318,9 +318,9 @@
     windowControls: { custom: false, minimize: noop, maximize: noop, toggleMaximize: noop, close: noop },
     glassSupported: async () => false,
     translucencySupported: async () => false,
-    setTranslucency: asyncNoop,
-    setNativeTheme: asyncNoop,
-    setTitleBarTheme: asyncNoop,
+    setTranslucency: noop,
+    setNativeTheme: noop,
+    setTitleBarTheme: noop,
     openExternal: url => { window.open(url, '_blank', 'noopener') },
     writeClipboard: text => navigator.clipboard.writeText(text),
     readClipboard: () => navigator.clipboard.readText(),
@@ -328,7 +328,7 @@
     notify: payload => {
       try { new Notification(payload.title || 'Hermes', { body: payload.body || '' }) } catch { /* no permission */ }
     },
-    setActiveWork: asyncNoop,
+    setActiveWork: noop,
     // Workspace cwd lives on the gateway host in web mode — echo requests
     // back unsanitized and report no configured default (the app's file
     // browser goes through the gateway's file API regardless).
