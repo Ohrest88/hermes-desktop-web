@@ -51,7 +51,15 @@ if [ ! -f /srv/index.html ]; then
   cd / && rm -rf /tmp/src
 fi
 
-# Render the nginx config with the gateway address + port.
-sed -e "s|\${GATEWAY}|$GATEWAY|g" -e "s/listen 8090;/listen $PORT;/" \
+# Preview pane shim: copy next to the bundle and load it before the renderer
+# (content-hashed query string so a browser never keeps a stale copy).
+cp /app/web-preview.js /srv/web-preview.js
+P=$(sha256sum /srv/web-preview.js | cut -c1-12)
+grep -q "web-preview.js?v=" /srv/index.html || \
+  sed -i "s#<script type=\"module\"#<script src=\"./web-preview.js?v=$P\"></script><script type=\"module\"#" /srv/index.html
+sed -i "s#web-preview.js?v=[0-9a-f]*#web-preview.js?v=$P#" /srv/index.html
+
+# Render the nginx config with the gateway + relay addresses and port.
+sed -e "s|\${GATEWAY}|$GATEWAY|g" -e "s|\${PREVIEW_RELAY}|${PREVIEW_RELAY:-127.0.0.1:18091}|g" -e "s/listen 8090;/listen $PORT;/" \
   /app/nginx.conf.template > /etc/nginx/http.d/default.conf
 exec nginx -g 'daemon off;'
