@@ -66,6 +66,34 @@ hermes plugins install Ohrest88/hermes-desktop-web#gateway-plugin/web-terminal -
 Without it, everything else works; the Terminal tab reports the backend
 terminal as unreachable.
 
+**Optional — Preview pane (built-in browser).** The desktop app's preview
+pane is an Electron `<webview>`; browsers don't have one. This repo ships a
+small relay that runs a headless Chromium on the Hermes machine and streams a
+tab into the pane, so "open a page", clicking, typing, scrolling, back/forward
+and the agent's `desktop_preview` / `drive_preview` tools work from a browser
+tab. One Chromium per Hermes profile (own cookies and storage). Install once
+on the machine where Hermes runs:
+
+```bash
+# needs: chromium, python3, python3-websockets
+cp -r preview-relay ~/hermes-desktop-web/preview-relay
+cp preview-relay/hermes-preview-relay.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now hermes-preview-relay
+curl http://127.0.0.1:18091/healthz      # {"ok": true, ...}
+```
+
+The container reaches the relay at `PREVIEW_RELAY` (default `127.0.0.1:18091`,
+so `--network host` just works). Without it, the pane shows "preview
+unavailable" and nothing else changes.
+
+Safety: the pane's WebSocket is only upgraded for a browser the gateway
+already recognises as signed in (nginx `auth_request` → `/api/auth/me`). The
+relay refuses non-http(s) URLs and anything that resolves to loopback, LAN,
+link-local or metadata addresses — including redirects and in-page fetches —
+so a page in the pane can't reach the Hermes backend or the host's own
+services. Page scripts run with a 20 s cap; browsers and panes are capped
+(`PREVIEW_MAX_BROWSERS`, `PREVIEW_MAX_PANES`).
+
 ## How it works
 
 The Desktop app is a plain React app. The single weld holding it to Electron
@@ -135,6 +163,8 @@ the official endpoint.
 |---|---|
 | `web-bridge.js` | **the entire custom code** (~310 lines): browser implementation of `window.hermesDesktop`, including the Terminal tab wiring |
 | `gateway-plugin/web-terminal/` | optional dashboard plugin for your Hermes instance: WS endpoint that spawns a shell PTY (see How it works ▸ Terminal tab) |
+| `web-preview.js` | optional: in-browser `<webview>` (~270 lines) that shows a streamed tab from the relay and forwards input/navigation; loaded before the renderer |
+| `preview-relay/` | optional: `relay.py` (headless Chromium + CDP screencast over one WebSocket per pane, ~500 lines) and a systemd user unit |
 | `build-renderer.mjs` | vite build of the upstream renderer, skipping Electron packaging; copies the adapter into `dist/` and injects it into `index.html` |
 | `nginx.conf.template` | static + proxy config (`GATEWAY`/`PORT` substituted at start) |
 | `Dockerfile` | node+nginx image; the build happens inside it at first start |

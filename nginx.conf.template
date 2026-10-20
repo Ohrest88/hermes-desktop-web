@@ -1,5 +1,6 @@
 # Hermes Desktop (web) — static bundle + same-origin gateway proxy.
 # GATEWAY: host:port of the hermes gateway (dashboard server).
+# PREVIEW_RELAY: host:port of preview-relay/relay.py (optional browser preview pane).
 server {
     listen 8090;
     server_name _;
@@ -28,4 +29,31 @@ server {
     # Gateway auth gate pages + flows (login form, oauth, ws-ticket REST is under /api).
     location /login { proxy_pass http://${GATEWAY}; proxy_set_header Host $host; }
     location /auth  { proxy_pass http://${GATEWAY}; proxy_set_header Host $host; }
+
+    # Optional: browser preview pane (see README ▸ Preview pane). The <webview>
+    # shim is served uncached; its WebSocket is only upgraded for a browser that
+    # the gateway already recognises as signed in (auth_request on /api/auth/me).
+    location = /web-preview.js {
+        root /srv;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+    }
+    location = /preview-ws {
+        auth_request /_preview_auth;
+        proxy_pass http://${PREVIEW_RELAY}/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+    location = /_preview_auth {
+        internal;
+        proxy_pass http://${GATEWAY}/api/auth/me;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Host $host;
+        proxy_set_header Cookie $http_cookie;
+    }
 }

@@ -1,0 +1,27 @@
+# Hermes Desktop Web - preview relay (headless Chromium + WebSocket stream).
+# Install: edit WorkingDirectory to your checkout, then cp to ~/.config/systemd/user/ ; systemctl --user daemon-reload ; systemctl --user enable --now hermes-preview-relay
+[Unit]
+Description=Hermes Desktop Web preview relay (server-side browser for the web preview pane)
+After=network.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/hermes-desktop-web/preview-relay
+Environment=PREVIEW_BIND=127.0.0.1,172.17.0.1
+Environment=PREVIEW_PORT=18091
+Environment=PREVIEW_CDP_PORT=9340
+Environment=PREVIEW_PROFILE_BASE=%h/.hermes/desktop-web-preview-profiles
+Environment=PREVIEW_MAX_BROWSERS=8
+Environment=PREVIEW_MAX_PANES=8
+ExecStart=/usr/bin/python3 -I relay.py
+Restart=on-failure
+RestartSec=3
+TasksMax=8192
+MemoryMax=6G
+KillMode=mixed
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
